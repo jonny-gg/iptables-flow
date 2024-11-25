@@ -1,0 +1,54 @@
+---
+- name: Deploy traffic scripts
+  hosts: network
+  tasks:
+    - name: create /usr/local/iptables/
+      file:
+        path: /usr/local/iptables/
+        state: directory
+
+    - name: Copy openrc and venv
+      copy:
+        src: '{{ item }}'
+        dest: /usr/local/iptables/
+      loop:
+        - 'pkg/venv.tar'
+        - '/etc/openstack/admin-openrc.sh'
+        - '/etc/animbus/certificates/private/external/external.crt'
+
+    - name: Copy scripts and binary files
+      copy:
+        src: '{{ item }}'
+        dest: /usr/local/iptables/
+        mode: '0744'
+      loop:
+        - 'pkg/iptables'
+        - 'pkg/iptables-save'
+        - 'pkg/iptables-restore'
+        - 'scripts/iptables_manager.py'
+        - 'scripts/iptables_flow.py'
+        - 'pkg/logrotate.sh'
+
+    - name: Unarchive the tar file
+      unarchive:
+        src: /usr/local/iptables/venv.tar
+        dest: /usr/local/iptables/
+        remote_src: yes
+        creates: /usr/local/iptables/venv
+
+    - name: Execute logrotate setup script
+      command: /usr/local/iptables/logrotate.sh
+
+    - name: Create crontab to refresh iptables rules
+      cron:
+        name: "Run iptables_manager.py task every minute"
+        minute: "*"
+        job: "/usr/local/iptables/iptables_manager.py"
+        state: present
+
+    - name: Create crontab to refresh iptables rules
+      cron:
+        name: "Run iptables_flow.py task every minute"
+        minute: "*"
+        job: "/usr/local/iptables/iptables_flow.py"
+        state: present

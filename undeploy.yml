@@ -1,0 +1,10 @@
+---
+- name: Undeploy traffic scripts
+  hosts: network
+  tasks:
+    - name: Delete iptables_manager.py crontab
+      cron:
+        name: "Run iptables_manager.py task every minute"
+        minute: "*"
+        job: "/usr/local/iptables/iptables_manager.py"
+        state: absent
